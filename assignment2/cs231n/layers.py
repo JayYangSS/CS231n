@@ -50,10 +50,14 @@ def affine_backward(dout, cache):
   """
   x, w, b = cache
   dx, dw, db = None, None, None
+  num_input=x.shape[0]
   #############################################################################
   # TODO: Implement the affine backward pass.                                 #
   #############################################################################
-  pass
+  db=np.sum(dout,axis=0)
+  dx=dout.dot(w.T).reshape(x.shape)
+  dw=x.reshape(num_input,np.prod(x.shape[1:])).T.dot(dout)
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
