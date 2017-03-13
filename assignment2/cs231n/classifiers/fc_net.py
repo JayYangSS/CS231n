@@ -45,7 +45,10 @@ class TwoLayerNet(object):
     # weights and biases using the keys 'W1' and 'b1' and second layer weights #
     # and biases using the keys 'W2' and 'b2'.                                 #
     ############################################################################
-    pass
+    self.params['W1']=weight_scale*np.random.randn(input_dim,hidden_dim)
+    self.params['b1']=np.zeros(hidden_dim)
+    self.params['W2']=weight_scale*np.random.randn(hidden_dim,num_classes)
+    self.params['b2']=np.zeros(num_classes)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -75,7 +78,8 @@ class TwoLayerNet(object):
     # TODO: Implement the forward pass for the two-layer net, computing the    #
     # class scores for X and storing them in the scores variable.              #
     ############################################################################
-    pass
+    hidden_output, hidden_cache=affine_relu_forward(X, self.params['W1'], self.params['b1'])
+    scores, out_cache=affine_forward(hidden_output, self.params['W2'], self.params['b2'])
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -95,11 +99,34 @@ class TwoLayerNet(object):
     # automated tests, make sure that your L2 regularization includes a factor #
     # of 0.5 to simplify the expression for the gradient.                      #
     ############################################################################
-    pass
+    
+    """ calculate loss can be used following code, more elegant way is calling softmax_loss
+    N=X.shape[0]
+    log_c=np.max(scores)
+    fixed_scores=scores - log_c
+    log_scores=-np.log(np.exp(fixed_scores)/np.sum(np.exp(fixed_scores),axis=1,keepdims=True)) #without the 'keepdims=True', the broadcast will occur error
+    correct_log_scores=log_scores[xrange(N),y]
+    loss=np.sum(correct_log_scores)
+    loss/=N 
+    """
+    loss,dout=softmax_loss(scores,y)
+    loss+=0.5*self.reg*(np.sum(self.params['W2']*self.params['W2'])+np.sum(self.params['W1']*self.params['W1']))
+
+    #second layer gradient
+    """ calculate gradient can be used following code, more elegant way is calling affine_backward
+    grads['W2']=hidden_output.T.dot(dout)
+    grads['b2']=np.sum(dout,axis=0)
+    dhidden_output=dout.dot(self.params['W2'].T)
+    """
+    dhidden_output,grads['W2'],grads['b1']=affine_backward(dout,out_cache)
+
+    #first layer gradient
+    dX,grads['W1'],grads['b1']=affine_relu_backward(dhidden_output,hidden_cache)
+    grads['W1']+=self.reg*self.params['W1']# add the regularization part for dW1
+    grads['W2']+=self.reg*self.params['W2']# add the regularization part for dW2
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
-
     return loss, grads
 
 
