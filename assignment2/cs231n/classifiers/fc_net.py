@@ -118,7 +118,7 @@ class TwoLayerNet(object):
     grads['b2']=np.sum(dout,axis=0)
     dhidden_output=dout.dot(self.params['W2'].T)
     """
-    dhidden_output,grads['W2'],grads['b1']=affine_backward(dout,out_cache)
+    dhidden_output,grads['W2'],grads['b2']=affine_backward(dout,out_cache)
 
     #first layer gradient
     dX,grads['W1'],grads['b1']=affine_relu_backward(dhidden_output,hidden_cache)
