@@ -188,7 +188,14 @@ class FullyConnectedNet(object):
     # beta2, etc. Scale parameters should be initialized to one and shift      #
     # parameters should be initialized to zero.                                #
     ############################################################################
-    pass
+    self.params['W1']=weight_scale*np.random.randn(input_dim,hidden_dims[0])
+    self.params['b1']=np.zeros(hidden_dims[0])
+    for index,val in enumerate(hidden_dims):
+        self.params['W%d'%(index+1)]=weight_scale*np.random.randn(input_dim,val)
+        self.params['b%d'%(index+1)]=np.zeros(val)
+        input_dim=val
+    self.params['W%d'%(self.num_layers)]=weight_scale*np.random.randn(input_dim,num_classes)
+    self.params['b%d'%(self.num_layers)]=np.zeros(num_classes)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -246,7 +253,11 @@ class FullyConnectedNet(object):
     # self.bn_params[1] to the forward pass for the second batch normalization #
     # layer, etc.                                                              #
     ############################################################################
-    pass
+    hidden_cache_list=[]
+    for index in xrange(self.num_layers-1):
+        X, hidden_cache=affine_relu_forward(X, self.params['W%d'%(index+1)], self.params['b%d'%(index+1)])
+        hidden_cache_list.append(hidden_cache)
+    scores, out_cache=affine_forward(X, self.params['W%d'%(self.num_layers)], self.params['b%d'%(self.num_layers)])
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -269,7 +280,22 @@ class FullyConnectedNet(object):
     # automated tests, make sure that your L2 regularization includes a factor #
     # of 0.5 to simplify the expression for the gradient.                      #
     ############################################################################
-    pass
+    loss,dout=softmax_loss(scores,y)
+    sum_w=0
+    for index in xrange(self.num_layers):
+        sum_w+=np.sum(self.params['W%d'%(index+1)]*self.params['W%d'%(index+1)])
+    loss+=0.5*self.reg*sum_w
+
+    # caculate the gradient
+    dhidden_output,grads['W%d'%(self.num_layers)],grads['b%d'%(self.num_layers)]=affine_backward(dout,out_cache)
+
+    for index in xrange(self.num_layers-1):
+        dhidden_output,grads['W%d'%(self.num_layers-1-index)],grads['b%d'%(self.num_layers-1-index)]=affine_relu_backward(dhidden_output,hidden_cache_list[self.num_layers-2-index])
+        grads['W%d'%(self.num_layers-1-index)]+=self.reg*self.params['W%d'%(self.num_layers-1-index)]# add the regularization part
+    
+
+    grads['W%d'%(self.num_layers)]+=self.reg*self.params['W%d'%(self.num_layers)]# add the regularization part for dW2
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
