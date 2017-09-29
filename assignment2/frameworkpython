@@ -2,7 +2,7 @@
 
 # what real Python executable to use
 PYVER=2.7
-PATHTOPYTHON=/usr/local/bin/
+PATHTOPYTHON=/usr/bin/
 PYTHON=${PATHTOPYTHON}python${PYVER}
 
 # find the root of the virtualenv, it should be the parent of the dir this script is in
