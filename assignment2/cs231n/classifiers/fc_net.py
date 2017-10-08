@@ -193,6 +193,9 @@ class FullyConnectedNet(object):
     for index,val in enumerate(hidden_dims):
         self.params['W%d'%(index+1)]=weight_scale*np.random.randn(input_dim,val)
         self.params['b%d'%(index+1)]=np.zeros(val)
+        if self.use_batchnorm:
+            self.params['gamma%d'%(index+1)]=np.ones(val)
+            self.params['beta%d'%(index+1)]=np.zeros(val)
         input_dim=val
     self.params['W%d'%(self.num_layers)]=weight_scale*np.random.randn(input_dim,num_classes)
     self.params['b%d'%(self.num_layers)]=np.zeros(num_classes)
@@ -254,9 +257,20 @@ class FullyConnectedNet(object):
     # layer, etc.                                                              #
     ############################################################################
     hidden_cache_list=[]
+    dp_cache_list=[]
     for index in xrange(self.num_layers-1):
-        X, hidden_cache=affine_relu_forward(X, self.params['W%d'%(index+1)], self.params['b%d'%(index+1)])
+        if self.use_batchnorm:
+            X, hidden_cache = affine_bn_relu_forward(X, self.params['W%d'%(index+1)], self.params['b%d'%(index+1)],
+                self.params['gamma%d'%(index+1)],self.params['beta%d'%(index+1)],self.bn_params[index])
+        else:
+            X, hidden_cache = affine_relu_forward(X, self.params['W%d'%(index+1)], self.params['b%d'%(index+1)])
+        if self.use_dropout:
+            X, dp_cache = dropout_forward(X, self.dropout_param)
+            dp_cache_list.append(dp_cache)
+
         hidden_cache_list.append(hidden_cache)
+        
+
     scores, out_cache=affine_forward(X, self.params['W%d'%(self.num_layers)], self.params['b%d'%(self.num_layers)])
     ############################################################################
     #                             END OF YOUR CODE                             #
@@ -288,13 +302,23 @@ class FullyConnectedNet(object):
 
     # caculate the gradient
     dhidden_output,grads['W%d'%(self.num_layers)],grads['b%d'%(self.num_layers)]=affine_backward(dout,out_cache)
+    grads['W%d'%(self.num_layers)] += self.reg * self.params['W%d'%(self.num_layers)] # add the regularization part for dW2
+
 
     for index in xrange(self.num_layers-1):
-        dhidden_output,grads['W%d'%(self.num_layers-1-index)],grads['b%d'%(self.num_layers-1-index)]=affine_relu_backward(dhidden_output,hidden_cache_list[self.num_layers-2-index])
+        if self.use_dropout:
+            dhidden_output = dropout_backward(dhidden_output, dp_cache_list[self.num_layers-2-index])
+        if self.use_batchnorm:
+            # use the newline symbol '\'
+            dhidden_output,grads['W%d'%(self.num_layers-1-index)],grads['b%d'%(self.num_layers-1-index)],\
+            grads['gamma%d'%(self.num_layers-1-index)],grads['beta%d'%(self.num_layers-1-index)] = \
+            affine_bn_relu_backward(dhidden_output, hidden_cache_list[self.num_layers-2-index])
+
+
+        else:
+            dhidden_output, grads['W%d'%(self.num_layers-1-index)],grads['b%d'%(self.num_layers-1-index)]=affine_relu_backward(dhidden_output,hidden_cache_list[self.num_layers-2-index])
         grads['W%d'%(self.num_layers-1-index)]+=self.reg*self.params['W%d'%(self.num_layers-1-index)]# add the regularization part
     
-
-    grads['W%d'%(self.num_layers)]+=self.reg*self.params['W%d'%(self.num_layers)]# add the regularization part for dW2
 
     ############################################################################
     #                             END OF YOUR CODE                             #
